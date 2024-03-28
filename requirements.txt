@@ -1,0 +1,16 @@
+cnocr==2.2.4.2
+easyocr==1.7.0
+graphviz==0.20.3
+lxml==5.0.0
+matplotlib==3.7.2
+numpy==1.26.4
+opencv_python==4.8.0.74
+opencv_python_headless==4.8.0.74
+Pillow==10.0.1
+pycocotools==2.0.6
+retry==0.9.2
+rich==13.7.1
+scikit_learn==1.4.1.post1
+torch==2.0.1
+torchvision==0.15.2
+tqdm==4.65.0
