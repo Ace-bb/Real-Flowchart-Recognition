@@ -261,7 +261,7 @@ class FlowchartRecognition(object):
         # print(f"arrow nodes is:{arrow_nodes}\n")
         self.save_recognised_imgs(img_path=image_path, annotations=shape_nodes, textAnnots=text_nodes, img_name=image_path.split('/')[-1])
         # Generate flowchart graph
-        graph = Graph(text_nodes,shape_nodes, arrow_nodes)
+        graph = Graph(text_nodes, shape_nodes, arrow_nodes)
         # flow = graph.generate_graph()
         graph.collapse_nodes_arrow()
         # print(f"flow: {flow}")
@@ -399,21 +399,30 @@ class FlowchartRecognition(object):
         """"""
         self.cnocr_lock.acquire()
         try:
-            result = self.ocr.ocr(image_path, box_score_thresh = score_threshold, min_box_size=bbox_size_threshold)
-        except:
+            result = self.ocr.ocr(image_path, cls=True)
+        except Exception as e:
+            console.log(f"[bold red]{e}")
             result=[]
         self.cnocr_lock.release()
         
         text_nodes = list()
-        for i in range(len(result)):
-            item = result[i]
+        # console.log(len(result))
+        for i in range(len(result[0])):
+            item = result[0][i]
+            # text_nodes.append(Node(idx=i, 
+            #                     coordinate=[
+            #                         int(item['position'][0][0]), 
+            #                         int(item['position'][2][0]), 
+            #                         int(item['position'][0][1]), 
+            #                         int(item['position'][2][1]),], 
+            #                     text=item['text']))
             text_nodes.append(Node(idx=i, 
                                 coordinate=[
-                                    int(item['position'][0][0]), 
-                                    int(item['position'][2][0]), 
-                                    int(item['position'][0][1]), 
-                                    int(item['position'][2][1]),], 
-                                text=item['text']))
+                                    int(item[0][0][0]), 
+                                    int(item[0][2][0]), 
+                                    int(item[0][0][1]), 
+                                    int(item[0][2][1]),], 
+                                text=item[1][0]))
         return text_nodes
     
     def generate_shapes_arrow_result(self, graph:Graph):
@@ -508,15 +517,31 @@ class FlowchartRecognition(object):
                 # ...
         if textAnnots != None:
             for annot in textAnnots:
-                # pts = np.array([[int(node[0]),int(node[1])], [int(node[2]), int(node[3])], [int(node[4]), int(node[5])], [int(node[6]), int(node[7])]])
-                # cv2.polylines(img, [pts], True, (0, 0, 255), 2)
                 cv2.rectangle(img, 
                             (annot.coordinate[0], annot.coordinate[2]), 
                             (annot.coordinate[1], annot.coordinate[3]), (0,0,255), 2)
                 
         # img_name = img_path.split('/')[-1]
         cv2.imwrite(f"{self.res_save_path}/{img_name}", img)
+    
+    def draw_recognized_node_edges(self, nodes, edges, img_path):
+        img = cv2.imread(img_path)
+        id2coordinate = {}
+        dp = {
+            "left": lambda p: (p[0], (p[2] + p[3])//2),
+            "right": lambda p: (p[1], (p[2] + p[3])//2),
+            "top": lambda p: ((p[0]+p[1])//2, p[2]),
+            "bottom": lambda p: ((p[0]+p[1])//2, p[3])
+        }
+        for node in nodes:
+            cv2.rectangle(img, 
+                            (node['coordinate'][0], node['coordinate'][2]), 
+                            (node['coordinate'][1], node['coordinate'][3]), (0,0,255), 2)
+            
+            cv2.putText(img, str(node['id']), ((node['coordinate'][0]+node['coordinate'][1])//2,( node['coordinate'][2]+node['coordinate'][3])//2), cv2.FONT_HERSHEY_COMPLEX, 2.0, (0, 0, 255), 4)
+            id2coordinate[str(node['id'])] = node['coordinate']
         
-# if __name__ == "__main__":
-#     fc_recog = FlowchartRecognition(recognize_model, category_index, ocr_model, recognize_lock, cnocr_lock, file_create_lock)
-#     fc_recog.recognize_flowchart(image_path='./images', img_name='./images/11.jpg')
+        for edge in edges:
+            cv2.line(img, dp[edge["source"]](id2coordinate[edge["sourceNode"]]), dp[edge["target"]](id2coordinate[edge["targetNode"]]), (0,0,255), 3)
+        cv2.imwrite(f"{self.res_save_path}/draw-node-edge.png", img)
+        

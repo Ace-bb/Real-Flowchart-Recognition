@@ -10,6 +10,7 @@ import torch
 from PIL import Image
 from FasterRCNN.predict import flowchat_recognize, create_model
 from cnocr import CnOcr
+from paddleocr import PaddleOCR, draw_ocr
 
 def init_flowchart_recognize_model(classed_file= "FasterRCNN/save_weights/V15ArrowMix/classes.json", models_path = "./FasterRCNN/save_weights/V15ArrowMix/resNetFpn-model-15.pth"):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -48,14 +49,18 @@ def start_recognize(recognize_model, category_index, ocr_model, img_path, result
             "height": item["size"]["height"],
             "rows": item["size"]["rows"]
         })
+    
     tools.write_2_json({"nodes": tmp_shape_nodes, "edges": arrow_nodes}, f"{result_save_path}/{img_name.replace('.png', '.json').replace('.jpg', '.json')}")
+    
+    recognizer.draw_recognized_node_edges(tmp_shape_nodes, arrow_nodes, f"{img_path}/{img_name}")
 
 def start_recognize_flowchart(flowchart_img_savepath, result_savepath):
     
     # recognizer = FlowchartRecognition()
     recognize_model, category_index = init_flowchart_recognize_model()
     # ocr_model = CnOcr(rec_model_name='densenet_lite_136-gru', rec_model_backend="pytorch", det_model_name="db_resnet34", det_model_backend="pytorch") # OCR中文
-    ocr_model = CnOcr(det_model_name='en_PP-OCRv3_det', rec_model_name='en_PP-OCRv3') # OCR英文
+    # ocr_model = CnOcr(det_model_name='en_PP-OCRv3_det', rec_model_name='en_PP-OCRv3') # OCR英文
+    ocr_model = PaddleOCR(use_gpu=True, lang="ch", det_model_dir="models/paddleocr/ch_PP-OCRv4_det_infer/", rec_model_dir="models/paddleocr/ch_PP-OCRv4_rec_infer/")
     print(f"recognize_model:{recognize_model}")
     print(f"category_index:{category_index}")
     run_paras = list()
